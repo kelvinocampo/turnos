@@ -1,5 +1,3 @@
-from persistencia import guardar_info
-
 recargo = 0
 
 recargo_dominicales = 0
@@ -180,4 +178,8 @@ def printar_resumen():
     return resumen
 resumen = printar_resumen()
 
+def guardar_info(data, filename):
+    with open(filename, 'w') as f:
+        for entry in data:
+            f.write(f"{entry}\n")
 guardar_info(resumen.splitlines(), "resumen_turnos.txt")

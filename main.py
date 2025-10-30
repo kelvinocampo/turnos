@@ -151,13 +151,14 @@ def printar_resumen():
 
         hora_inicio_formato = formato_hora(turno["hora_inicio"])
         hora_fin_formato = formato_hora(turno["hora_fin"])
+        tipo_hora = "Extra" if turno["extra"] else "Recargo"
 
         resumen += (
             f"Dia: {turno['dia']}, "
             f"Hora inicio: {hora_inicio_formato}, "
             f"Hora fin: {hora_fin_formato}, "
             f"Turno: {turno['turno']}, "
-            f"Extra: {turno['extra']}, "
+            f"Tipo de hora: {tipo_hora}, "
             f"Horas: {turno['horas']}\n"
         )
         resumen += "-" * 10 + "\n"

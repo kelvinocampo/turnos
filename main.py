@@ -1,33 +1,38 @@
-recargo = 0
+import sys
 
-recargo_dominicales = 0
-recargo_nocturnas = 0
-recargo_dominicales_nocturnas = 0
-
-extras = 0
-
-extras_dominicales = 0
-extras_nocturnas = 0
-extras_dominicales_nocturnas = 0
-
-turnos = []
 dias = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+
+
+def continuar_registro():
+    while True:
+        continuar = input(
+            f"\nPresione Enter para continuar con el registro o ingrese: out - Detener Programa: "
+        )
+
+        if not continuar in ["out", ""]:
+            print("\nEntrada no valida.")
+            continue
+
+        if continuar == "out":
+            sys.exit()
+
+        break
 
 
 def ingresar_turno(dia):
     while True:
         turno = input(
-            f"\nIngrese el turno a registrar dia {dia}: 1 - Diurno, 2 - Nocturno, no - No registra, exit - Detener registro: "
+            f"\nIngrese el turno a registrar dia {dia}: \n1 - Diurno, \n2 - Nocturno, \n3 - No registra, \n4 - Detener registro: \n"
         )
 
-        if not turno in ["1", "2", "no", "exit"]:
+        if not turno in ["1", "2", "3", "4"]:
             print("\nEntrada no valida.")
             continue
 
-        if turno == "no":
+        if turno == "3":
             return turno, False
 
-        if turno == "exit":
+        if turno == "4":
             return turno, True
 
         turno = "dia" if turno == "1" else "nocturno"
@@ -100,7 +105,6 @@ def registar_turno(dias):
             }
 
         turnos.append(turno_registrar)
-registar_turno(dias)
 
 
 def calcular_recargos_extras(turnos):
@@ -129,7 +133,6 @@ def calcular_recargos_extras(turnos):
             turno["turno"] == "dia" and turno["dia"] == "domingo" and not turno["extra"]
         ):
             recargo_dominicales += turno["horas"]
-calcular_recargos_extras(turnos)
 
 
 def printar_resumen():
@@ -176,10 +179,35 @@ def printar_resumen():
 
     print(resumen)
     return resumen
-resumen = printar_resumen()
+
 
 def guardar_info(data, filename):
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         for entry in data:
             f.write(f"{entry}\n")
-guardar_info(resumen.splitlines(), "resumen_turnos.txt")
+
+
+while True:
+
+    continuar_registro()
+
+    identificador = input(f"\nIngrese el identificador del documento: ")
+
+    recargo = 0
+
+    recargo_dominicales = 0
+    recargo_nocturnas = 0
+    recargo_dominicales_nocturnas = 0
+
+    extras = 0
+
+    extras_dominicales = 0
+    extras_nocturnas = 0
+    extras_dominicales_nocturnas = 0
+
+    turnos = []
+
+    registar_turno(dias)
+    calcular_recargos_extras(turnos)
+    resumen = printar_resumen()
+    guardar_info(resumen.splitlines(), f"resumen_turnos_{identificador}.txt")

@@ -211,3 +211,4 @@ while True:
     calcular_recargos_extras(turnos)
     resumen = printar_resumen()
     guardar_info(resumen.splitlines(), f"resumen_turnos_{identificador}.txt")
+    input()

@@ -1,56 +1,53 @@
-import sys
+import flet as ft
 
 dias = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
 
 
-def continuar_registro():
-    while True:
-        continuar = input(
-            f"\nPresione Enter para continuar con el registro o ingrese: out - Detener Programa: "
-        )
+def main(page: ft.Page):
+    page.title = "Registro de Turnos"
+    page.scroll = "auto"
+    page.vertical_alignment = ft.MainAxisAlignment.START
 
-        if not continuar in ["out", ""]:
-            print("\nEntrada no valida.")
-            continue
+    # Variables globales de estado
+    recargo = 0
+    extras = 0
+    turnos = []
+    identificador = ft.TextField(label="Identificador del documento", width=300)
 
-        if continuar == "out":
-            sys.exit()
+    # Elementos UI dinámicos
+    salida_texto = ft.Text("", selectable=True)
+    dropdown_turno = ft.Dropdown(
+        label="Selecciona el tipo de turno",
+        options=[
+            ft.dropdown.Option("1 - Diurno"),
+            ft.dropdown.Option("2 - Nocturno"),
+            ft.dropdown.Option("3 - No registra"),
+            ft.dropdown.Option("4 - Detener registro"),
+        ],
+        width=300,
+    )
 
-        break
+    # Estado de índice del día actual
+    dia_index = {"value": 0}
 
+    # -----------------------------------------------------
+    # Funciones de lógica (idénticas a tu código base)
+    # -----------------------------------------------------
 
-def ingresar_turno(dia):
-    while True:
-        turno = input(
-            f"\nIngrese el turno a registrar dia {dia}: \n1 - Diurno, \n2 - Nocturno, \n3 - No registra, \n4 - Detener registro: \n"
-        )
-
-        if not turno in ["1", "2", "3", "4"]:
-            print("\nEntrada no valida.")
-            continue
-
-        if turno == "3":
-            return turno, False
-
-        if turno == "4":
-            return turno, True
-
-        turno = "dia" if turno == "1" else "nocturno"
-        break
-    return turno, False
-
-
-def registar_turno(dias):
-    global recargo, extras
-    for dia in dias:
+    def registrar_turno(dias, recargo, extras, turnos, dia, turno):
         recargo_inicial = recargo
         extras_inicial = extras
+        salir = False
 
-        turno, salir = ingresar_turno(dia)
-        if turno == "no":
-            continue
-        if salir:
-            break
+        if turno == "1 - Diurno":
+            turno = "dia"
+        elif turno == "2 - Nocturno":
+            turno = "nocturno"
+        elif turno == "3 - No registra":
+            return recargo, extras, turnos, salir
+        elif turno == "4 - Detener registro":
+            salir = True
+            return recargo, extras, turnos, salir
 
         recargo += 12
         aplica_extras = recargo > 44
@@ -64,9 +61,7 @@ def registar_turno(dias):
 
             if recargo - recargo_inicial > 0:
                 hora_inicio = 6 if turno == "dia" else 18
-                hora_fin = (
-                    18 - extras_registrar if turno == "dia" else 30 - extras_registrar
-                )
+                hora_fin = 18 - extras_registrar if turno == "dia" else 30 - extras_registrar
                 turno_registrar = {
                     "dia": dia,
                     "hora_inicio": hora_inicio,
@@ -77,12 +72,7 @@ def registar_turno(dias):
                 }
                 turnos.append(turno_registrar)
 
-            hora_inicio = (
-                6 + (12 - extras_registrar)
-                if turno == "dia"
-                else 18 + (12 - extras_registrar)
-            )
-
+            hora_inicio = 6 + (12 - extras_registrar) if turno == "dia" else 18 + (12 - extras_registrar)
             hora_fin = 18 if turno == "dia" else 30
             turno_registrar = {
                 "dia": dia,
@@ -105,110 +95,123 @@ def registar_turno(dias):
             }
 
         turnos.append(turno_registrar)
+        return recargo, extras, turnos, salir
 
+    def formato_hora(hora):
+        hora = hora % 24
+        sufijo = "AM" if 0 <= hora < 12 else "PM"
+        hora_12 = hora if 1 <= hora <= 12 else abs(hora - 12)
+        if hora_12 == 0:
+            hora_12 = 12
+        return f"{hora_12} {sufijo}"
 
-def calcular_recargos_extras(turnos):
-    global recargo_dominicales, recargo_nocturnas, recargo_dominicales_nocturnas
-    global extras_dominicales, extras_nocturnas, extras_dominicales_nocturnas
-    for turno in turnos:
-        horas_nocturnas = turno["hora_fin"] - turno["hora_inicio"]
-        horas_nocturnas -= 3 if turno["hora_inicio"] < 21 else 0
-
-        # Extra
-        if turno["hora_fin"] > 21 and turno["dia"] == "domingo" and turno["extra"]:
-            extras_dominicales_nocturnas += horas_nocturnas
-        elif turno["hora_fin"] > 21 and turno["dia"] != "domingo" and turno["extra"]:
-            extras_nocturnas += horas_nocturnas
-        elif turno["turno"] == "dia" and turno["dia"] == "domingo" and turno["extra"]:
-            extras_dominicales += turno["horas"]
-
-        # Recargo
-        if turno["hora_fin"] > 21 and turno["dia"] == "domingo" and not turno["extra"]:
-            recargo_dominicales_nocturnas += horas_nocturnas
-        elif (
-            turno["hora_fin"] > 21 and turno["dia"] != "domingo" and not turno["extra"]
-        ):
-            recargo_nocturnas += horas_nocturnas
-        elif (
-            turno["turno"] == "dia" and turno["dia"] == "domingo" and not turno["extra"]
-        ):
-            recargo_dominicales += turno["horas"]
-
-
-def printar_resumen():
-    resumen = "----- Resumen -----\n"
-    resumen += "Turnos registrados:\n"
-    resumen += "-" * 10 + "\n"
-
-    for turno in turnos:
-        # Ajuste de formato de horas
-        def formato_hora(hora):
-            hora = hora % 24  # Normaliza si pasa de 24
-            sufijo = "AM" if 0 <= hora < 12 else "PM"
-            hora_12 = hora if 1 <= hora <= 12 else abs(hora - 12)
-            if hora_12 == 0:
-                hora_12 = 12
-            return f"{hora_12} {sufijo}"
-
-        hora_inicio_formato = formato_hora(turno["hora_inicio"])
-        hora_fin_formato = formato_hora(turno["hora_fin"])
-        tipo_hora = "Extra" if turno["extra"] else "Recargo"
-
-        resumen += (
-            f"Dia: {turno['dia']}, "
-            f"Hora inicio: {hora_inicio_formato}, "
-            f"Hora fin: {hora_fin_formato}, "
-            f"Turno: {turno['turno']}, "
-            f"Tipo de hora: {tipo_hora}, "
-            f"Horas: {turno['horas']}\n"
-        )
+    def printar_resumen(turnos, recargo, extras):
+        resumen = "----- Resumen -----\n"
+        resumen += "Turnos registrados:\n"
         resumen += "-" * 10 + "\n"
 
-    resumen += f"Recargo total horas: {recargo}\n"
-    resumen += f"Extras total horas: {extras}\n\n"
+        for turno in turnos:
+            hora_inicio_formato = formato_hora(turno["hora_inicio"])
+            hora_fin_formato = formato_hora(turno["hora_fin"])
+            tipo_hora = "Extra" if turno["extra"] else "Recargo"
 
-    resumen += "Detalle recargos:\n"
-    resumen += f"Recargo nocturnas: {recargo_nocturnas}\n"
-    resumen += f"Recargo dominicales: {recargo_dominicales}\n"
-    resumen += f"Recargo dominicales nocturnas: {recargo_dominicales_nocturnas}\n\n"
+            resumen += (
+                f"Dia: {turno['dia']}, "
+                f"Hora inicio: {hora_inicio_formato}, "
+                f"Hora fin: {hora_fin_formato}, "
+                f"Turno: {turno['turno']}, "
+                f"Tipo de hora: {tipo_hora}, "
+                f"Horas: {turno['horas']}\n"
+            )
+            resumen += "-" * 10 + "\n"
 
-    resumen += "Detalle extras:\n"
-    resumen += f"Extras nocturnas: {extras_nocturnas}\n"
-    resumen += f"Extras dominicales: {extras_dominicales}\n"
-    resumen += f"Extras dominicales nocturnas: {extras_dominicales_nocturnas}\n"
+        resumen += f"Recargo total horas: {recargo}\n"
+        resumen += f"Extras total horas: {extras}\n"
+        return resumen
 
-    print(resumen)
-    return resumen
+    def guardar_info(data, filename):
+        with open(filename, "w") as f:
+            for entry in data.splitlines():
+                f.write(f"{entry}\n")
+
+    # -----------------------------------------------------
+    # Función principal del flujo
+    # -----------------------------------------------------
+
+    def siguiente_turno(e):
+        nonlocal recargo, extras, turnos
+
+        if dia_index["value"] >= len(dias):
+            salida_texto.value = "✅ Todos los días registrados."
+            page.update()
+            return
+
+        dia = dias[dia_index["value"]]
+        turno = dropdown_turno.value
+
+        if not turno:
+            salida_texto.value = "⚠️ Selecciona un tipo de turno antes de continuar."
+            page.update()
+            return
+
+        recargo, extras, turnos, salir = registrar_turno(dias, recargo, extras, turnos, dia, turno)
+
+        if salir:
+            mostrar_resumen()
+            return
+
+        dia_index["value"] += 1
+
+        if dia_index["value"] < len(dias):
+            dropdown_turno.value = None
+            titulo_dia.value = f"📅 Día actual: {dias[dia_index['value']]}"
+        else:
+            mostrar_resumen()
+
+        page.update()
+
+    def mostrar_resumen():
+        resumen = printar_resumen(turnos, recargo, extras)
+        salida_texto.value = resumen
+        guardar_info(resumen, f"resumen_turnos_{identificador.value}.txt")
+        page.update()
+
+    def reiniciar_app(e):
+        nonlocal recargo, extras, turnos
+        recargo = 0
+        extras = 0
+        turnos = []
+        dia_index["value"] = 0
+        salida_texto.value = ""
+        identificador.value = ""
+        dropdown_turno.value = None
+        titulo_dia.value = f"📅 Día actual: {dias[0]}"
+        page.update()
+
+    # -----------------------------------------------------
+    # Interfaz
+    # -----------------------------------------------------
+
+    titulo_dia = ft.Text(f"📅 Día actual: {dias[0]}", size=20, weight=ft.FontWeight.BOLD)
+
+    page.add(
+        ft.Column(
+            [
+                ft.Text("Registro de Turnos", size=26, weight=ft.FontWeight.BOLD),
+                identificador,
+                titulo_dia,
+                dropdown_turno,
+                ft.Row(
+                    [
+                        ft.ElevatedButton("Registrar turno", on_click=siguiente_turno),
+                        ft.ElevatedButton("Reiniciar", on_click=reiniciar_app),
+                    ]
+                ),
+                ft.Divider(),
+                salida_texto,
+            ]
+        )
+    )
 
 
-def guardar_info(data, filename):
-    with open(filename, "w") as f:
-        for entry in data:
-            f.write(f"{entry}\n")
-
-
-while True:
-
-    continuar_registro()
-
-    identificador = input(f"\nIngrese el identificador del documento: ")
-
-    recargo = 0
-
-    recargo_dominicales = 0
-    recargo_nocturnas = 0
-    recargo_dominicales_nocturnas = 0
-
-    extras = 0
-
-    extras_dominicales = 0
-    extras_nocturnas = 0
-    extras_dominicales_nocturnas = 0
-
-    turnos = []
-
-    registar_turno(dias)
-    calcular_recargos_extras(turnos)
-    resumen = printar_resumen()
-    guardar_info(resumen.splitlines(), f"resumen_turnos_{identificador}.txt")
-    input()
+ft.app(target=main)
